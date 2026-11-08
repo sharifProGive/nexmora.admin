@@ -23,7 +23,7 @@ class ApiException(
 ) : Exception("$kind/$error/$status")
 
 object Net {
-    /** Accepts "host" or "https://host", returns "https://host" without a trailing slash, or null when invalid. */
+    // Accepts "host" or "https://host", returns "https://host" without a trailing slash, or null when invalid.
     fun normalizeUrl(raw: String): String? {
         var s = raw.trim().trimEnd('/')
         if (s.isEmpty()) return null
@@ -39,11 +39,10 @@ object Net {
     }
 }
 
-/**
- * Talks to /api/v1/admin/*. Every request carries the Bearer Admin Token; every request except state, setup and
- * rebind is also signed by the phone's fingerprint-protected key (METHOD, URL, time, nonce, SHA-256 of the body).
- * Waking Render servers (502/503/504) and network drops are retried with exponential backoff and jitter.
- */
+// Talks to the admin endpoints of the server. Every request carries the Bearer Admin Token; every request
+// except state, setup and rebind is also signed by the phone's fingerprint-protected key (METHOD, URL, time,
+// nonce, SHA-256 of the body). Waking Render servers (502, 503, 504) and network drops are retried with
+// exponential backoff and jitter.
 class AdminApi(private val baseUrl: String, private val token: String, private val keyAlias: String) {
     private val random = SecureRandom()
 
