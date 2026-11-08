@@ -94,11 +94,13 @@ class AppVm(app: Application) : AndroidViewModel(app) {
         error = null
     }
 
+    @JvmName("changeLanguage")
     fun setLang(value: Lang) {
         lang = value
         store.setLang(value)
     }
 
+    @JvmName("changeScreenProtect")
     fun setScreenProtect(on: Boolean) {
         screenProtect = on
         store.setScreenProtect(on)
@@ -184,7 +186,7 @@ class AppVm(app: Application) : AndroidViewModel(app) {
             error = S.passwordMismatch
             return
         }
-        if (!KeyGate.available(getApplication())) {
+        if (!KeyGate.available(getApplication<Application>())) {
             error = S.noBiometric
             return
         }
@@ -255,7 +257,7 @@ class AppVm(app: Application) : AndroidViewModel(app) {
             error = S.codeInvalid
             return
         }
-        if (!KeyGate.available(getApplication())) {
+        if (!KeyGate.available(getApplication<Application>())) {
             error = S.noBiometric
             return
         }
