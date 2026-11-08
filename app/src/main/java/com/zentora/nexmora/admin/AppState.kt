@@ -38,7 +38,14 @@ fun errorText(e: Throwable): Tx = when (e) {
             "already_registered" -> S.errAlready
             "not_registered" -> S.errNotRegistered
             "stale_request", "bad_signature", "replayed_request" -> S.errSignature
-            else -> S.errServer
+            else -> {
+                val code = "[HTTP " + e.status + " " + e.error + "]"
+                Tx(
+                    "सर्वर से गड़बड़ मिली, फिर कोशिश करें। " + code,
+                    "সার্ভার থেকে সমস্যা এসেছে, আবার চেষ্টা করুন। " + code,
+                    "The server returned an error. Try again. " + code
+                )
+            }
         }
     }
     else -> S.errUnknown
