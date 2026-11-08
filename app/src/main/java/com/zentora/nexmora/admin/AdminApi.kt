@@ -41,8 +41,8 @@ object Net {
 
 // Talks to the admin endpoints of the server. Every request carries the Bearer Admin Token; every request
 // except state, setup and rebind is also signed by the phone's fingerprint-protected key (METHOD, URL, time,
-// nonce, SHA-256 of the body). Waking Render servers (502, 503, 504) and network drops are retried with
-// exponential backoff and jitter.
+// nonce, SHA-256 of the body). A sleeping Render server (it answers 502, 503 or 504 while waking, which can
+// take about a minute) and network drops are retried with exponential backoff and jitter, capped at 8 seconds.
 class AdminApi(private val baseUrl: String, private val token: String, private val keyAlias: String) {
     private val random = SecureRandom()
 
@@ -75,13 +75,14 @@ class AdminApi(private val baseUrl: String, private val token: String, private v
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: ApiException) {
-                    val transient = e.kind == Kind.SERVER && (e.status == 502 || e.status == 503 || e.status == 504)
+                    val transient = e.kind == Kind.SERVER &&
+                        (e.status == 502 || e.status == 503 || e.status == 504 || e.status in 520..524)
                     if (!transient) throw e
                     last = e
                 } catch (e: IOException) {
                     last = ApiException(Kind.NETWORK, "network")
                 }
-                if (attempt < MAX_RETRIES) delay((1000L shl attempt) + Random.nextLong(0, 600))
+                if (attempt < MAX_RETRIES) delay(minOf(1000L shl attempt, 8000L) + Random.nextLong(0, 600))
             }
             throw last
         }
@@ -138,6 +139,6 @@ class AdminApi(private val baseUrl: String, private val token: String, private v
         MessageDigest.getInstance("SHA-256").digest(data).joinToString("") { "%02x".format(it) }
 
     private companion object {
-        const val MAX_RETRIES = 3
+        const val MAX_RETRIES = 8
     }
 }
