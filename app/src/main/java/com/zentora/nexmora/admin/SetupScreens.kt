@@ -1,9 +1,18 @@
 package com.zentora.nexmora.admin
 
+import android.content.ClipData
+import android.content.ClipDescription
+import android.content.ClipboardManager
+import android.content.Context
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.PersistableBundle
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -13,11 +22,41 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+private val copyBtn = Tx("कोड कॉपी करें", "কোড কপি করুন", "Copy code")
+private val copiedNote = Tx(
+    "कॉपी हो गया। इसे अभी किसी लॉक वाले नोट में रखें या कागज़ पर लिखें। 60 सेकंड बाद क्लिपबोर्ड से हटा दिया जाएगा।",
+    "কপি হয়েছে। এখনই কোনো লক করা নোটে রাখুন বা কাগজে লিখুন। ৬০ সেকেন্ড পরে ক্লিপবোর্ড থেকে সরানো হবে।",
+    "Copied. Put it in a locked note or write it on paper now. It is removed from the clipboard after 60 seconds."
+)
+
+private fun copySecret(context: Context, text: String) {
+    val manager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    val clip = ClipData.newPlainText("nexmora", text)
+    if (Build.VERSION.SDK_INT >= 33) {
+        val extras = PersistableBundle()
+        extras.putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
+        clip.description.extras = extras
+    }
+    manager.setPrimaryClip(clip)
+    Handler(Looper.getMainLooper()).postDelayed({
+        try {
+            if (Build.VERSION.SDK_INT >= 28) {
+                manager.clearPrimaryClip()
+            } else {
+                manager.setPrimaryClip(ClipData.newPlainText("", ""))
+            }
+        } catch (e: Exception) {
+            // the clipboard could not be cleared; nothing more to do
+        }
+    }, 60000L)
+}
 
 @Composable
 fun ConnectScreen(vm: AppVm) {
@@ -52,7 +91,9 @@ fun SecureScreen(vm: AppVm) {
 
 @Composable
 fun RecoveryScreen(vm: AppVm, code: String) {
+    val context = LocalContext.current
     var written by remember { mutableStateOf(false) }
+    var copied by remember { mutableStateOf(false) }
     Page {
         Heading(S.recoveryTitle.t())
         Body(S.recoveryHint.t())
@@ -68,6 +109,14 @@ fun RecoveryScreen(vm: AppVm, code: String) {
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
             )
         }
+        OutlinedButton(
+            onClick = {
+                copySecret(context, code)
+                copied = true
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("📋 " + copyBtn.t()) }
+        if (copied) Body(copiedNote.t(), NxGood)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = written, onCheckedChange = { written = it })
             Text(S.recoveryWritten.t(), color = NxText, fontSize = 16.sp)
