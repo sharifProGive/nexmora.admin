@@ -69,6 +69,18 @@ fun HomeScreen(vm: AppVm) {
                 NavigationBarItem(
                     selected = tab == 1,
                     onClick = { tab = 1 },
+                    icon = { Text("👥", fontSize = 20.sp) },
+                    label = { Text(U.tabUsers.t()) }
+                )
+                NavigationBarItem(
+                    selected = tab == 2,
+                    onClick = { tab = 2 },
+                    icon = { Text("🛠", fontSize = 20.sp) },
+                    label = { Text(C.tabControl.t()) }
+                )
+                NavigationBarItem(
+                    selected = tab == 3,
+                    onClick = { tab = 3 },
                     icon = { Text("⚙️", fontSize = 20.sp) },
                     label = { Text(S.tabSettings.t()) }
                 )
@@ -76,7 +88,12 @@ fun HomeScreen(vm: AppVm) {
         }
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
-            if (tab == 0) OverviewTab(vm) else SettingsTab(vm)
+            when (tab) {
+                0 -> OverviewTab(vm)
+                1 -> UsersTab(vm)
+                2 -> ControlTab(vm)
+                else -> SettingsTab(vm)
+            }
         }
     }
 }
