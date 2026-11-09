@@ -71,6 +71,9 @@ class AppVm(app: Application) : AndroidViewModel(app) {
     var loadError by mutableStateOf<Tx?>(null)
         private set
 
+    /** The Users and Control tabs: list, search, profile, archive, bans, ledger, vaults. */
+    val users = UsersModel(this)
+
     /** Set by MainActivity: shows the fingerprint dialog. */
     var prompter: (suspend (String, String, String) -> AuthResult)? = null
 
@@ -145,7 +148,8 @@ class AppVm(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private suspend fun <T> secured(block: suspend (AdminApi) -> T): T {
+    /** Runs a signed call; when the fingerprint window has expired it asks for the finger once and retries. */
+    internal suspend fun <T> secured(block: suspend (AdminApi) -> T): T {
         val current = api ?: throw ApiException(Kind.KEY_INVALID, "no_api")
         try {
             return block(current)
@@ -154,6 +158,16 @@ class AppVm(app: Application) : AndroidViewModel(app) {
         }
         askFinger()
         return block(current)
+    }
+
+    /** Turns an API failure into a message; when the phone key is gone it sends the owner to the code screen. */
+    internal fun failure(e: ApiException): Tx? {
+        if (e.kind == Kind.KEY_INVALID) {
+            goRebind()
+            error = S.errKeyInvalid
+            return null
+        }
+        return errorText(e)
     }
 
     // ---------------------------------------------------------------- first run
@@ -242,6 +256,7 @@ class AppVm(app: Application) : AndroidViewModel(app) {
         if (screen == Screen.Home) {
             overview = null
             loadError = null
+            users.clear()
             screen = Screen.Locked
         }
     }
@@ -304,12 +319,7 @@ class AppVm(app: Application) : AndroidViewModel(app) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: ApiException) {
-                if (e.kind == Kind.KEY_INVALID) {
-                    goRebind()
-                    error = S.errKeyInvalid
-                } else {
-                    loadError = errorText(e)
-                }
+                loadError = failure(e)
             } catch (e: Throwable) {
                 loadError = S.errUnknown
             } finally {
